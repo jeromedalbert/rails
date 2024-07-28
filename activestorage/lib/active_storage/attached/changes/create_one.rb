@@ -22,18 +22,12 @@ module ActiveStorage
 
     def upload
       case attachable
-      when ActionDispatch::Http::UploadedFile
-        blob.upload_without_unfurling(attachable.open)
-      when Rack::Test::UploadedFile
-        blob.upload_without_unfurling(
-          attachable.respond_to?(:open) ? attachable.open : attachable
-        )
+      when ActionDispatch::Http::UploadedFile, Pathname, Rack::Test::UploadedFile
+        blob.upload_without_unfurling(to_open_io(attachable))
       when Hash
         blob.upload_without_unfurling(attachable.fetch(:io))
       when File
         blob.upload_without_unfurling(attachable)
-      when Pathname
-        blob.upload_without_unfurling(attachable.open)
       when ActiveStorage::Blob
       when String
       else
@@ -43,6 +37,8 @@ module ActiveStorage
             "got #{attachable.inspect}"
         )
       end
+    ensure
+      close_internally_opened_io
     end
 
     def save
@@ -69,17 +65,9 @@ module ActiveStorage
         case attachable
         when ActiveStorage::Blob
           attachable
-        when ActionDispatch::Http::UploadedFile
+        when ActionDispatch::Http::UploadedFile, Rack::Test::UploadedFile
           ActiveStorage::Blob.build_after_unfurling(
-            io: attachable.open,
-            filename: attachable.original_filename,
-            content_type: attachable.content_type,
-            record: record,
-            service_name: attachment_service_name
-          )
-        when Rack::Test::UploadedFile
-          ActiveStorage::Blob.build_after_unfurling(
-            io: attachable.respond_to?(:open) ? attachable.open : attachable,
+            io: to_open_io(attachable),
             filename: attachable.original_filename,
             content_type: attachable.content_type,
             record: record,
@@ -103,7 +91,7 @@ module ActiveStorage
           )
         when Pathname
           ActiveStorage::Blob.build_after_unfurling(
-            io: attachable.open,
+            io: to_open_io(attachable),
             filename: File.basename(attachable),
             record: record,
             service_name: attachment_service_name
@@ -115,6 +103,15 @@ module ActiveStorage
               "got #{attachable.inspect}"
           )
         end
+      end
+
+      def to_open_io(attachable)
+        return attachable if !attachable.respond_to?(:open)
+        @open_io ||= attachable.open
+      end
+
+      def close_internally_opened_io
+        @open_io&.close
       end
 
       def attachment_service_name
