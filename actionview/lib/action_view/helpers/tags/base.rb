@@ -80,27 +80,27 @@ module ActionView
             end
           end
 
-          def add_default_name_and_id_for_value(tag_value, options)
+          def add_default_name_and_id_for_value(tag_value, options, id_field = "id")
             if tag_value.nil?
-              add_default_name_and_id(options)
+              add_default_name_and_id(options, id_field)
             else
-              specified_id = options["id"]
-              add_default_name_and_id(options)
+              specified_id_field = options[id_field]
+              add_default_name_and_id(options, id_field)
 
-              if specified_id.blank? && options["id"].present?
-                options["id"] += "_#{sanitized_value(tag_value)}"
+              if specified_id_field.blank? && options[id_field].present?
+                options[id_field] += "_#{sanitized_value(tag_value)}"
               end
             end
           end
 
-          def add_default_name_and_id(options)
+          def add_default_name_and_id(options, id_field = "id")
             index = name_and_id_index(options)
             options["name"] = options.fetch("name") { tag_name(options["multiple"], index) }
 
             if generate_ids?
-              options["id"] = options.fetch("id") { tag_id(index, options.delete("namespace")) }
+              options[id_field] = options.fetch(id_field) { tag_id(index, options.delete("namespace")) }
               if namespace = options.delete("namespace")
-                options["id"] = options["id"] ? "#{namespace}_#{options['id']}" : namespace
+                options[id_field] = options[id_field] ? "#{namespace}_#{options[id_field]}" : namespace
               end
             end
           end
