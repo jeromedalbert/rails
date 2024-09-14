@@ -67,7 +67,7 @@ class ScaffoldControllerGeneratorTest < Rails::Generators::TestCase
 
     assert_file "app/controllers/users_controller.rb" do |content|
       assert_match(/def user_params/, content)
-      assert_match(/params\.expect\(user: \{\}\)/, content)
+      assert_match(/params\.fetch\(:user, \{\}\)/, content)
     end
   end
 
